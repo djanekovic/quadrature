@@ -8,11 +8,11 @@
 double compute_integral_line(double (*f)(double x, double y, double z),
                              double a, double b, int n)
 {
-    double *tmp, *pw, sum = 0;
+    double *tmp, *pw, A, B, sum = 0;
     int size, num_points;
 
-    double A = (b - a)/2.0;
-    double B = (a + b)/2.0;
+    A = (b - a)/2.0;
+    B = (a + b)/2.0;
 
     switch(n) {
         case 2:
@@ -72,7 +72,7 @@ double compute_integral_line(double (*f)(double x, double y, double z),
             tmp = (double[QUAD_1D_15_LEN]){ QUAD_1D_15 };
             break;
         default:
-            fprintf(stderr, "Highest supported order is 8, defaulting to 8.\n");
+            fprintf(stderr, "Order %d unsupported, defaulting to 16.\n", n);
             n = 16;
         case 16:
             size = QUAD_1D_16_LEN;
@@ -82,20 +82,20 @@ double compute_integral_line(double (*f)(double x, double y, double z),
     pw = malloc(size*sizeof(double));
     memcpy(pw, tmp, size * sizeof(double));
 
-    num_points = size/2;
+    num_points = size>>1;
 
-
-    if (n % 2 == 1) {
+    /* if number of points is odd */
+    if (n & 1) {
         sum = pw[1] * f(B, 0, 0);
 
         for (int i = 1; i < num_points; i++) {
-            int _i2 = i * 2;
+            int _i2 = i << 1;
             double _f = f(A * pw[_i2] + B, 0, 0) + f(B - pw[_i2] * A, 0, 0);
             sum += pw[_i2+1] * _f;
         }
     } else {
         for (int i = 0; i < num_points; i++) {
-            int _i2 = i * 2;
+            int _i2 = i << 1;
             double _f = f(A * pw[_i2] + B, 0, 0) + f(B - pw[_i2] * A, 0, 0);
             sum += pw[_i2+1] * _f;
         }
