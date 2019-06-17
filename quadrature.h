@@ -105,7 +105,17 @@
                    0.9894009349916499325961542, 0.0271524594117540948517806
 #define QUAD_1D_16_LEN 16
 
+typedef struct {
+    int n;
+    int size;
+    double *pw;
+} quadrature_t;
+
+int init_quadrature(int n, quadrature_t *q);
+void destroy_quadrature(quadrature_t *q);
 double compute_integral_line(double (*f)(double x, double y, double z),
-                             double a, double b, int n);
+                             double a, double b, quadrature_t *q);
+double compute_integral_line_alloc(double (*f)(double x, double y, double z),
+                                   double a, double b, int n);
 
 #endif /* QUADRATURE_H */

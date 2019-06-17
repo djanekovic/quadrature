@@ -4,15 +4,10 @@
 
 #include "quadrature.h"
 
-/* Compute line integral using n-points quadrature */
-double compute_integral_line(double (*f)(double x, double y, double z),
-                             double a, double b, int n)
+int init_quadrature(int n, quadrature_t *q)
 {
-    double *tmp, *pw, A, B, sum = 0;
-    int size, num_points;
-
-    A = (b - a)/2.0;
-    B = (a + b)/2.0;
+    int size;
+    double *tmp;
 
     switch(n) {
         case 2:
@@ -79,27 +74,94 @@ double compute_integral_line(double (*f)(double x, double y, double z),
             tmp = (double[QUAD_1D_16_LEN]){ QUAD_1D_16 };
             break;
     }
-    pw = malloc(size*sizeof(double));
-    memcpy(pw, tmp, size * sizeof(double));
 
-    num_points = size>>1;
+    q->pw = malloc(size * sizeof(double));
+    if (q->pw == NULL) {
+        fprintf(stderr, "Allocating memory for point-weight failed\n");
+        return 1;
+    }
+
+    memcpy(q->pw, tmp, size * sizeof(double));
+    q->size = size;
+    q->n = n;
+
+    return 0;
+}
+
+void destroy_quadrature(quadrature_t *q)
+{
+    if (q->pw) {
+        free(q->pw);
+    }
+}
+
+double compute_integral_line(double (*f)(double x, double y, double z),
+                             double a, double b, quadrature_t *q)
+{
+    double A, B, sum = 0;
+    int num_points;
+
+    A = (b - a)/2.0;
+    B = (a + b)/2.0;
+
+    num_points = q->size>>1;
 
     /* if number of points is odd */
-    if (n & 1) {
-        sum = pw[1] * f(B, 0, 0);
+    if (q->n & 1) {
+        sum = q->pw[1] * f(B, 0, 0);
 
         for (int i = 1; i < num_points; i++) {
             int _i2 = i << 1;
-            double _f = f(A * pw[_i2] + B, 0, 0) + f(B - pw[_i2] * A, 0, 0);
-            sum += pw[_i2+1] * _f;
+            double _f = f(A * q->pw[_i2] + B, 0, 0) + f(B - q->pw[_i2] * A, 0, 0);
+            sum += q->pw[_i2+1] * _f;
         }
     } else {
         for (int i = 0; i < num_points; i++) {
             int _i2 = i << 1;
-            double _f = f(A * pw[_i2] + B, 0, 0) + f(B - pw[_i2] * A, 0, 0);
-            sum += pw[_i2+1] * _f;
+            double _f = f(A * q->pw[_i2] + B, 0, 0) + f(B - q->pw[_i2] * A, 0, 0);
+            sum += q->pw[_i2+1] * _f;
         }
     }
+
+    return A*sum;
+}
+
+/* Compute line integral using n-points quadrature */
+double compute_integral_line_alloc(double (*f)(double x, double y, double z),
+                                   double a, double b, int n)
+{
+    double A, B, sum = 0;
+    int num_points;
+    quadrature_t q;
+
+    A = (b - a)/2.0;
+    B = (a + b)/2.0;
+
+    if(init_quadrature(n, &q)) {
+        fprintf(stderr, "Quadrature table init failed, exiting...\n");
+        exit(1);
+    }
+
+    num_points = q.size>>1;
+
+    /* if number of points is odd */
+    if (n & 1) {
+        sum = q.pw[1] * f(B, 0, 0);
+
+        for (int i = 1; i < num_points; i++) {
+            int _i2 = i << 1;
+            double _f = f(A * q.pw[_i2] + B, 0, 0) + f(B - q.pw[_i2] * A, 0, 0);
+            sum += q.pw[_i2+1] * _f;
+        }
+    } else {
+        for (int i = 0; i < num_points; i++) {
+            int _i2 = i << 1;
+            double _f = f(A * q.pw[_i2] + B, 0, 0) + f(B - q.pw[_i2] * A, 0, 0);
+            sum += q.pw[_i2+1] * _f;
+        }
+    }
+
+    destroy_quadrature(&q);
 
     return A*sum;
 }
