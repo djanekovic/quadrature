@@ -4,7 +4,7 @@
 
 #include "quadrature.h"
 
-int init_quadrature(int n, quadrature_t *q)
+int _init_quadrature_1(int n, quadrature_t *q)
 {
     int size;
     double *tmp;
@@ -88,11 +88,83 @@ int init_quadrature(int n, quadrature_t *q)
     return 0;
 }
 
+int _init_quadrature_2(int n, quadrature_t *q)
+{
+    double *tmp;
+    int size;
+
+    switch (n) {
+        case 1:
+            tmp = (double[QUAD_2D_1_LEN]){ QUAD_2D_1 };
+            size = QUAD_2D_1_LEN;
+            break;
+        case 2:
+            tmp = (double[QUAD_2D_2_LEN]){ QUAD_2D_2 };
+            size = QUAD_2D_2_LEN;
+            break;
+        case 3:
+            tmp = (double[QUAD_2D_3_LEN]){ QUAD_2D_3 };
+            size = QUAD_2D_3_LEN;
+            break;
+        case 4:
+            tmp = (double[QUAD_2D_4_LEN]){ QUAD_2D_4 };
+            size = QUAD_2D_4_LEN;
+            break;
+        case 5:
+            tmp = (double[QUAD_2D_5_LEN]){ QUAD_2D_5 };
+            size = QUAD_2D_5_LEN;
+            break;
+        case 6:
+            tmp = (double[QUAD_2D_6_LEN]){ QUAD_2D_6 };
+            size = QUAD_2D_6_LEN;
+            break;
+        case 7:
+            tmp = (double[QUAD_2D_7_LEN]){ QUAD_2D_7 };
+            size = QUAD_2D_7_LEN;
+            break;
+        default:
+            fprintf(stderr, "Order %d unsupported, defaulting to 8.\n", n);
+            n = 8;
+        case 8:
+            tmp = (double[QUAD_2D_8_LEN]){ QUAD_2D_8 };
+            size = QUAD_2D_8_LEN;
+            break;
+    }
+
+    q->pw = malloc(size * sizeof(double));
+    if (q->pw == NULL) {
+        fprintf(stderr, "Allocating memory for point-weight failed\n");
+        return 1;
+    }
+
+    memcpy(q->pw, tmp, size * sizeof(double));
+    q->size = size/3;
+    q->n = n;
+
+    return 0;
+}
+
+int init_quadrature(int dimensions, int n, quadrature_t *q)
+{
+    int retval;
+
+    switch(dimensions) {
+        case 1:
+            retval = _init_quadrature_1(n, q);
+            break;
+        case 2:
+            retval = _init_quadrature_2(n, q);
+            break;
+        default:
+            fprintf(stderr, "Dimension %d unsupported\n", dimensions);
+            retval = 1;
+    }
+    return retval;
+}
+
 void destroy_quadrature(quadrature_t *q)
 {
-    if (q->pw) {
-        free(q->pw);
-    }
+    free(q->pw);
 }
 
 double compute_integral_line(double (*f)(double x, double y, double z),
@@ -137,7 +209,7 @@ double compute_integral_line_alloc(double (*f)(double x, double y, double z),
     A = (b - a)/2.0;
     B = (a + b)/2.0;
 
-    if(init_quadrature(n, &q)) {
+    if(_init_quadrature_1(n, &q)) {
         fprintf(stderr, "Quadrature table init failed, exiting...\n");
         exit(1);
     }
@@ -164,4 +236,40 @@ double compute_integral_line_alloc(double (*f)(double x, double y, double z),
     destroy_quadrature(&q);
 
     return A*sum;
+}
+
+double compute_integral_triangle_alloc(double (*f)(double x, double y, double z),
+                                       int n)
+{
+    double sum = 0;
+    quadrature_t q;
+
+    if (_init_quadrature_2(n, &q)) {
+        fprintf(stderr, "Quadrature table init failed, exiting...\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < q.size; i++) {
+        int _i3 = i * 3;
+
+        sum += q.pw[_i3+2]*f(q.pw[_i3], q.pw[_i3+1], 0);
+    }
+
+    destroy_quadrature(&q);
+
+    return 0.5 * sum;
+}
+
+double compute_integral_triangle(double (*f)(double x, double y, double z),
+                                 quadrature_t *q)
+{
+    double sum = 0;
+
+    for (int i = 0; i < q->size; i++) {
+        int _i3 = i * 3;
+
+        sum += q->pw[_i3+2]*f(q->pw[_i3], q->pw[_i3+1], 0);
+    }
+
+    return 0.5 * sum;
 }
