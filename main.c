@@ -5,7 +5,7 @@
 
 double f_1(double x, double y, double z)
 {
-    return sin(x);
+    return 2.0;
 }
 
 int main(int argc, char **argv)
@@ -14,16 +14,21 @@ int main(int argc, char **argv)
     quadrature_t q;
 
     for (int i = 2; i <= 16; i++) {
-        init_quadrature(i, &q);
+        init_quadrature(1, i, &q);
         printf("%d points: error = %.17g\n", i,
-                exact - compute_integral_line(f_1, 0, M_PI, &q));
+                exact - compute_integral_line(f_1, 0, 2.0, &q));
         destroy_quadrature(&q);
     }
 
-    puts("");
-
     for (int i = 2; i <= 16; i++) {
         printf("%d points: error = %.17g\n", i,
-                exact - compute_integral_line_alloc(f_1, 0, M_PI, i));
+                M_PI * 2.0 - compute_integral_line_alloc(f_1, 0, M_PI, i));
+    }
+
+    for (int i = 1; i <= 8; i++) {
+        init_quadrature(2, i, &q);
+        printf("%d points: error = %.17g\n", i,
+                0.5*2 - compute_integral_triangle_alloc(f_1, i));
+        destroy_quadrature(&q);
     }
 }
